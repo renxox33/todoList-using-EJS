@@ -1,11 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Hello ! It's <%= dayOfWeek %></h1>
+<%-include('header')%>
+    
+    <div class="box">
+        <% newListItem.forEach((element) => { %>
+            <div class="item">
+                <input type="checkbox">
+                <p> <%=element%> </p>
+            </div>
+            <% }) %>   
+                
+        <form class="item" method="POST" action="/">
+            <input type="text" name='newTodoItem' placeholder="Add an item" autocomplete="off">
+            <button type="submit">+</button>
+        </form>    
+        
+    </div> 
 </body>
 </html>
