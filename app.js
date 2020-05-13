@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const mongoose = require('mongoose')
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -8,29 +9,144 @@ app.set('view engine', 'ejs')
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static('css'))
 
-let today = new Date()
-let options = {
-    weekday: 'long',
-    day: 'numeric', 
-    month: 'long'
-}
+mongoose.connect('mongodb://localhost:27017/todolistItems', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
 
-let todoItems = []
+const itemSchema = mongoose.Schema({
+    name: {
+        type: String,
+        required: [true, 'Name of to-do cannot be empty']
+    }
+})
 
-let day = today.toLocaleString('en-US', options)
+const listSchema = mongoose.Schema({
+    name: String,
+    list: [itemSchema]
+})
+
+const Item = mongoose.model('Item', itemSchema)
+
+const List = mongoose.model('List', listSchema)
+
+const newItem1 = new Item({
+    name: 'Fix DTD'
+})
+
+const newItem2 = new Item({
+    name: 'Code some more'
+})
+
+const newItem3 = new Item({
+    name: 'Exercise'
+})
+
+const itemsList = [newItem1, newItem2, newItem3]
+
+// Item.insertMany(itemsList, (err, items) => {
+//     if(err){
+//         console.log(err)
+//     } else{
+//         console.log('Todos inserted')
+//         console.log(items);
+        
+//     }
+// })
+
 
 
 app.get('/', (req,res) => {
 
-    res.render('list', { dayOfWeek: day, newListItem: todoItems})
+    Item.find({}, (err,items) => {
+        if(err){
+            console.log(err)
+        } else{  
+            res.render('list', { dayOfWeek: 'Today', newListItem: items})
+        }
+    })
+
+    
 })
 
 app.post('/', (req,res) => {
 
-    todoItems.push(req.body.newTodoItem)
-    console.log(todoItems);
+    const listName = req.body.listName.toLowerCase()
+
+    const newTodoItem = new Item({     
+            name: req.body.newTodoItem
+    })
+
+    if(listName === 'Today'){
+        newTodoItem.save()
+    } else{
+        List.findOne({ name: listName }, (err, foundList) => {
+            if(err){
+                console.log(err);
+                
+            } else{
+                if(foundList){
+                    
+                    foundList.list.push(newTodoItem)
+                    foundList.save()
+                    res.redirect('/' + listName)
+                }
+            }
+        })
+    }
     
-    res.redirect('/')
+})
+
+app.post('/delete', (req,res) => {
+    const itemId =  req.body.checkbox
+    const listName = req.body.listName.toLowerCase()
+
+    if(listName === 'today'){
+        Item.findOneAndDelete({ _id: itemId }, (err) => {
+            
+            if(err){
+                console.log(err);   
+            }
+            res.redirect('/')
+        })
+    } else{
+        List.findOneAndUpdate({ name: listName }, {$pull: {list: {_id: itemId}}}, (err, foundList) => {
+            if(err){
+                console.log(err);
+                
+            } else{
+                if(foundList){
+                    foundList.save()
+                    res.redirect('/' + listName)
+                }
+            }
+        })
+    }
+
+    
+})
+
+app.get('/:listId', (req,res) => {
+    const listName = req.params.listId.toLowerCase()
+
+    List.findOne({ name: listName }, (err, list) => {
+        if(err){
+            console.log(err);
+        } else{
+            if(list){
+                res.render('list', { dayOfWeek: listName.toUpperCase(), newListItem: list.list })
+                
+            } else{
+
+                const newList = new List({
+                    name: listName,
+                    list: itemsList
+                })
+            
+                newList.save()
+                res.redirect('/' + req.params.listId)
+            }
+            
+        }
+    })
+
     
 })
 
