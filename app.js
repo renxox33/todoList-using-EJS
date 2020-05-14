@@ -9,7 +9,7 @@ app.set('view engine', 'ejs')
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static('css'))
 
-mongoose.connect('mongodb://localhost:27017/todolistItems', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
+mongoose.connect('mongodb+srv://admin-raj:Test123@cluster0-3zpqz.mongodb.net/todolistItems', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
 
 const itemSchema = mongoose.Schema({
     name: {
@@ -74,10 +74,18 @@ app.post('/', (req,res) => {
             name: req.body.newTodoItem
     })
 
-    if(listName === 'Today'){
-        newTodoItem.save()
+    if(listName === 'today'){
+        Item.insertMany([newTodoItem], (err, data) => {
+            if(err){
+                console.log(err);
+                
+            }else{
+                console.log(data);
+                res.redirect('/')
+            }
+        })
     } else{
-        List.findOne({ name: listName }, (err, foundList) => {
+        List.findOne({ name: listName }, async (err, foundList) => {
             if(err){
                 console.log(err);
                 
@@ -85,7 +93,7 @@ app.post('/', (req,res) => {
                 if(foundList){
                     
                     foundList.list.push(newTodoItem)
-                    foundList.save()
+                    await foundList.save()
                     res.redirect('/' + listName)
                 }
             }
